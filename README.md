@@ -291,17 +291,28 @@ sin excepciones.
 Cobertura confirmada: **3.760 plantillas únicas en el dataset completo y 3.760
 vectores en Pinecone.** Toda oferta es alcanzable por la búsqueda.
 
-### Limitación importante: memoria
+### Consumo de memoria: resuelto
 
-La API carga el parquet completo en memoria al arrancar, en
-[api/app/search.py](api/app/search.py). Medido: **6,74 GB de memoria privada.**
-
-El parquet trae las 25 columnas originales, incluidas `Job Description`,
+La API cargaba las 25 columnas del dataset, incluidas `Job Description`,
 `texto_combinado`, `Company Profile` y `Benefits`, que la búsqueda **nunca usa**.
-Cargar solo las columnas necesarias debería reducirlo drásticamente.
+Ahora carga solo las 13 necesarias, desde un único parquet reducido:
 
-Esto importa porque **el despliegue en Railway no va a caber** en un plan estándar
-con ese consumo. Es lo primero que hay que atacar antes de desplegar.
+| | Antes | Ahora |
+|---|---|---|
+| Archivos de datos | 438,6 MB (2 archivos) | **27,4 MB** (1 archivo, versionado) |
+| DataFrame en memoria | 2.845 MB | **304 MB** |
+| Proceso de la API | 6,74 GB | **1,1 GB** (working set) |
+| Tiempo de arranque | ~60 s | **4 s** |
+
+Los resultados de búsqueda son **idénticos**: se verificó ejecutando las mismas
+consultas con ambas cargas y comparando las respuestas completas (6 de 6
+iguales, además de las listas de países y modalidades). Lo semántico ocurre
+entero dentro de Pinecone; el parquet solo sirve para expandir `template_id` a
+ofertas reales, filtrar y mostrar.
+
+El archivo `api/data/ofertas_busqueda.parquet` está versionado, así que un clon
+del repositorio ya puede levantar la API sin pasar por Google Drive. Para
+regenerarlo tras un cambio en los notebooks: `python generar_datos_busqueda.py`.
 
 ### Otros pendientes
 
@@ -316,23 +327,39 @@ con ese consumo. Es lo primero que hay que atacar antes de desplegar.
 
 ---
 
-## 9. Desplegar en Railway
+## 9. Despliegue
 
-> Antes de esto, resolver la limitación de memoria de la sección 8.
+El **frontend** se publica en [Streamlit Community
+Cloud](https://share.streamlit.io) —gratis, sin tarjeta y siempre encendido— con
+una URL pública permanente. La **API** se ejecuta en el equipo de quien presenta
+y se expone con un túnel de Cloudflare, también gratuito y sin cuenta.
 
-1. Railway detecta el `Dockerfile` de `api/` automáticamente:
-   *New Project* → *Deploy from GitHub repo*.
-2. En la pestaña *Variables* del servicio, agrega `PINECONE_API_KEY`,
-   `PINECONE_INDEX_NAME` y, si se usa la descarga automática,
-   `DRIVE_FILE_ID_CLEAN` / `DRIVE_FILE_ID_MAPEO`.
-3. Si se usa la descarga automática, antepón `python descargar_datos.py &&` al
-   *Start Command*, para que los datos se bajen en cada despliegue.
-4. Railway entrega una URL pública (`https://tu-proyecto.up.railway.app`).
+La herramienta del túnel se instala una sola vez con
+`winget install --id Cloudflare.cloudflared`, y no necesita cuenta ni tarjeta.
+Hecho eso, la demostración se arranca con dos comandos, en dos terminales:
 
-Para el frontend, [Streamlit Community Cloud](https://share.streamlit.io) es
-gratis: apunta a `frontend/app.py` y pon la URL de Railway en *Secrets* como
-`API_URL`. Como Streamlit llama a la API desde su servidor y no desde el
-navegador, la configuración de CORS no lo afecta.
+```powershell
+# Terminal 1
+cd api
+.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --port 8000
+```
+
+```powershell
+# Terminal 2
+cloudflared tunnel --url http://localhost:8000
+```
+
+La dirección que imprime el túnel se pega en el campo **URL de la API** de la
+barra lateral de la aplicación desplegada. No hay que reconfigurar ni reiniciar
+nada, aunque el túnel cambie de dominio en cada arranque.
+
+El motivo de este montaje es que la API necesita ~700 MB de memoria y un proceso
+siempre vivo, y a octubre de 2026 no hay ninguna plataforma gratuita, sin tarjeta
+y permanentemente encendida que lo soporte: Railway da un crédito de prueba de un
+solo uso, Hugging Face Spaces movió Docker a su plan de pago, Render ofrece
+512 MB que no alcanzan, Fly.io y Koyeb retiraron su cómputo gratuito, y Google
+Cloud Run exige tarjeta registrada.
 
 ---
 

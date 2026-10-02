@@ -56,8 +56,12 @@ def hay_archivo_secrets() -> bool:
     return any(ruta.is_file() for ruta in rutas)
 
 
-def obtener_api_url() -> str:
-    """URL de la API: .streamlit/secrets.toml > variable de entorno > localhost."""
+def url_por_defecto() -> str:
+    """URL inicial de la API: secrets.toml > variable de entorno > localhost.
+
+    Es solo el valor con el que arranca el campo de la barra lateral; una vez la
+    app está abierta, manda lo que haya escrito ahí.
+    """
     url = ""
     if hay_archivo_secrets():
         try:
@@ -66,10 +70,15 @@ def obtener_api_url() -> str:
             url = ""
     if not url:
         url = os.environ.get("API_URL", "")
-    return (url or "http://localhost:8000").rstrip("/")
+    return normalizar_url(url or "http://localhost:8000")
 
 
-API_URL = obtener_api_url()
+def normalizar_url(url: str) -> str:
+    """Limpia una URL pegada a mano: espacios, barra final y esquema ausente."""
+    url = url.strip().rstrip("/")
+    if url and "://" not in url:
+        url = "https://" + url
+    return url
 
 
 # --- Llamadas cacheadas ------------------------------------------------------
@@ -178,10 +187,27 @@ def pintar_tarjeta(oferta: dict) -> None:
 # --- Barra lateral: estado de la API y filtros -------------------------------
 
 with st.sidebar:
+    st.markdown("### Conexión")
+
+    # La URL se edita desde aquí y no solo desde los secrets porque la API se
+    # publica con un túnel de Cloudflare, que genera un dominio distinto cada
+    # vez que se reinicia. Pegarla aquí evita tener que reconfigurar y reiniciar
+    # la app desplegada en Streamlit Cloud antes de cada demostración.
+    if "api_url" not in st.session_state:
+        st.session_state.api_url = url_por_defecto()
+
+    st.text_input(
+        "URL de la API",
+        key="api_url",
+        help="Pega aquí la URL que imprime `cloudflared`. Si la dejas vacía se "
+             "usa http://localhost:8000.",
+    )
+    API_URL = normalizar_url(st.session_state.api_url) or "http://localhost:8000"
+
     st.markdown("### Estado del servicio")
 
-    # GET /health — no es decorativo: con Railway el contenedor puede estar
-    # dormido, y este indicador distingue "API cargando" de "app colgada".
+    # GET /health — no es decorativo: distingue "API arrancando o dormida" de
+    # "la aplicación se colgó", y confirma que la URL pegada arriba responde.
     api_ok, mensaje_estado = consultar_estado(API_URL)
     if api_ok:
         st.success(mensaje_estado, icon="✅")
@@ -192,7 +218,6 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
 
-    st.caption("API: " + API_URL)
     st.divider()
 
     st.markdown("### Filtros")

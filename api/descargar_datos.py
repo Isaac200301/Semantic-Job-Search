@@ -7,7 +7,7 @@ Uso:
     1. En Google Drive, clic derecho sobre cada archivo -> "Obtener enlace" -> "Cualquiera con el enlace".
     2. Copia el ID del archivo (la parte del enlace entre /d/ y /view).
     3. Define las variables de entorno DRIVE_FILE_ID_CLEAN y DRIVE_FILE_ID_MAPEO
-       (localmente en tu .env, o como Variables en Railway).
+       (en tu archivo .env, o exportadas en la terminal).
     4. Corre: python descargar_datos.py
 
 Si prefieres copiar los archivos a mano, simplemente ignora este script y

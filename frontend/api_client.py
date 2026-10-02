@@ -24,8 +24,8 @@ import requests
 
 # La API tarda en responder la PRIMERA petición porque al arrancar carga el
 # modelo de embeddings y el parquet del dataset (ver search.cargar_recursos).
-# En Railway, además, el contenedor puede estar dormido: por eso la búsqueda
-# usa un timeout mucho más generoso que el resto.
+# Por eso la búsqueda usa un timeout mucho más generoso que el resto de
+# llamadas, que son instantáneas una vez el servicio está en marcha.
 TIMEOUT_RAPIDO = 15
 TIMEOUT_BUSQUEDA = 120
 
@@ -103,6 +103,13 @@ def _pedir(
         ) from exc
     except requests.exceptions.RequestException as exc:
         raise ErrorAPI(f"Error inesperado al llamar {ruta}: {exc}") from exc
+    except Exception as exc:
+        # Una URL mal formada puede reventar por debajo de requests, en urllib3,
+        # con errores que NO heredan de RequestException (por ejemplo
+        # LocationParseError si el host es larguísimo). Como la URL de la API se
+        # pega a mano desde la interfaz, aquí nunca debe escaparse nada: un
+        # error tipográfico tiene que verse como un mensaje, no tumbar la app.
+        raise ErrorAPI(f"La URL no parece válida ({url_base}): {exc}") from exc
 
     duracion_ms = (time.perf_counter() - inicio) * 1000
 

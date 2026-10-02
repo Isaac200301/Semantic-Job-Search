@@ -11,8 +11,12 @@ venv/
 api/.env
 
 # Datos
+# Los parquet originales de Colab (438 MB) NO se versionan...
 api/data/*.parquet
 api/data/*.npy
+# ...pero el reducido (27 MB) SI: es lo unico que la API necesita para correr,
+# y versionarlo evita depender de Google Drive en cada despliegue.
+!api/data/ofertas_busqueda.parquet
 
 # Editor / SO
 .vscode/
@@ -22,3 +26,6 @@ Thumbs.db
 
 # Configuracion local del frontend (el .example si se versiona)
 frontend/.streamlit/secrets.toml
+
+# Notas personales de despliegue, no van al repositorio
+DESPLIEGUE.md

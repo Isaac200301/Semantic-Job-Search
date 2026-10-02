@@ -82,23 +82,21 @@ Pinecone vive del lado de la API, no aquí), pero conviene no versionarlo.
 
 1. Entra a [share.streamlit.io](https://share.streamlit.io) con la cuenta de GitHub
    dueña del repositorio.
-2. *New app* → selecciona el repo, rama `main`, y como *Main file path* pon
+2. *New app* → selecciona el repo, la rama, y como *Main file path* pon
    `frontend/app.py`.
-3. En *Advanced settings* → *Secrets*, pega:
+3. Deploy. Streamlit instala `frontend/requirements.txt` automáticamente.
 
-   ```toml
-   API_URL = "https://tu-proyecto.up.railway.app"
-   ```
-
-4. Deploy. Streamlit instala `frontend/requirements.txt` automáticamente.
+No hace falta configurar *Secrets*: la URL de la API se pega en el campo de la
+barra lateral, porque el túnel de Cloudflare genera un dominio distinto en cada
+arranque. Ver la sección 9 del [README del repositorio](../README.md).
 
 Como Streamlit llama a la API **desde su servidor** y no desde el navegador, la
 configuración de CORS de la API no afecta a este frontend.
 
 ## 5. Comportamiento esperado en la primera búsqueda
 
-La API carga el modelo de embeddings y el dataset al arrancar, y en Railway el
-contenedor puede estar dormido. Por eso:
+La API carga el modelo de embeddings y el dataset al arrancar, y el túnel puede
+tardar un instante en establecerse. Por eso:
 
 - El timeout de `POST /buscar` es de 120 s (el del resto, 15 s).
 - El indicador de la barra lateral distingue "API caída" de "API pensando".
