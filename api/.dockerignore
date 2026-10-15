@@ -1,0 +1,30 @@
+# Sin este archivo, el `COPY . .` del Dockerfile mete en la imagen el entorno
+# virtual, los parquet originales y el .env con la API key: la imagen pasa de
+# 2,6 GB a casi 13 GB, y ademas queda una credencial dentro. Medido, no teorico.
+
+# Entorno virtual (se reinstala dentro del contenedor)
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Credenciales: NUNCA dentro de la imagen.
+# En Cloud Run se inyectan como variables del servicio.
+.env
+
+# Parquet originales de Colab (438 MB). La API no los necesita: usa el
+# reducido data/ofertas_busqueda.parquet, que si se copia.
+data/job_descriptions_clean.parquet
+data/job_id_template_map.parquet
+data/*.npy
+
+# Utilidades que solo se usan en local, no en tiempo de ejecucion
+descargar_datos.py
+generar_datos_busqueda.py
+
+# Varios
+.git/
+.gitignore
+.DS_Store
+Thumbs.db

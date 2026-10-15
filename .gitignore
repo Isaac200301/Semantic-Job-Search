@@ -29,3 +29,4 @@ frontend/.streamlit/secrets.toml
 
 # Notas personales de despliegue, no van al repositorio
 DESPLIEGUE.md
+CLOUDRUN.md
