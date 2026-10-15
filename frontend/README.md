@@ -86,17 +86,23 @@ Pinecone vive del lado de la API, no aquí), pero conviene no versionarlo.
    `frontend/app.py`.
 3. Deploy. Streamlit instala `frontend/requirements.txt` automáticamente.
 
-No hace falta configurar *Secrets*: la URL de la API se pega en el campo de la
-barra lateral, porque el túnel de Cloudflare genera un dominio distinto en cada
-arranque. Ver la sección 9 del [README del repositorio](../README.md).
+En *Advanced settings* → *Secrets*, define la URL de la API:
+
+   ```toml
+   API_URL = "https://semantic-job-search-api-6s7pi2umqq-uc.a.run.app"
+   ```
+
+También puede cambiarse desde el campo de la barra lateral, útil para apuntar a
+una API local durante el desarrollo. Ver la sección 9 del
+[README del repositorio](../README.md).
 
 Como Streamlit llama a la API **desde su servidor** y no desde el navegador, la
 configuración de CORS de la API no afecta a este frontend.
 
 ## 5. Comportamiento esperado en la primera búsqueda
 
-La API carga el modelo de embeddings y el dataset al arrancar, y el túnel puede
-tardar un instante en establecerse. Por eso:
+La API corre en Cloud Run, que escala a cero: tras un periodo sin uso, la
+primera petición tiene que esperar a que arranque el contenedor. Por eso:
 
 - El timeout de `POST /buscar` es de 120 s (el del resto, 15 s).
 - El indicador de la barra lateral distingue "API caída" de "API pensando".

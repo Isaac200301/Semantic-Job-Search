@@ -189,18 +189,18 @@ def pintar_tarjeta(oferta: dict) -> None:
 with st.sidebar:
     st.markdown("### Conexión")
 
-    # La URL se edita desde aquí y no solo desde los secrets porque la API se
-    # publica con un túnel de Cloudflare, que genera un dominio distinto cada
-    # vez que se reinicia. Pegarla aquí evita tener que reconfigurar y reiniciar
-    # la app desplegada en Streamlit Cloud antes de cada demostración.
+    # La URL normalmente viene de los secrets (la API vive en Cloud Run con una
+    # dirección fija), pero se deja editable aquí para poder apuntar a otra
+    # instancia sin redesplegar: una API local durante el desarrollo, o una
+    # dirección temporal si hiciera falta levantarla en otro sitio.
     if "api_url" not in st.session_state:
         st.session_state.api_url = url_por_defecto()
 
     st.text_input(
         "URL de la API",
         key="api_url",
-        help="Pega aquí la URL que imprime `cloudflared`. Si la dejas vacía se "
-             "usa http://localhost:8000.",
+        help="Normalmente ya viene configurada. Cámbiala para apuntar a otra "
+             "instancia; si la dejas vacía se usa http://localhost:8000.",
     )
     API_URL = normalizar_url(st.session_state.api_url) or "http://localhost:8000"
 

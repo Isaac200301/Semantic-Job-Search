@@ -329,37 +329,46 @@ regenerarlo tras un cambio en los notebooks: `python generar_datos_busqueda.py`.
 
 ## 9. Despliegue
 
-El **frontend** se publica en [Streamlit Community
-Cloud](https://share.streamlit.io) —gratis, sin tarjeta y siempre encendido— con
-una URL pública permanente. La **API** se ejecuta en el equipo de quien presenta
-y se expone con un túnel de Cloudflare, también gratuito y sin cuenta.
+El sistema está desplegado y es público. **No hay que encender nada** para usarlo.
 
-La herramienta del túnel se instala una sola vez con
-`winget install --id Cloudflare.cloudflared`, y no necesita cuenta ni tarjeta.
-Hecho eso, la demostración se arranca con dos comandos, en dos terminales:
+| Pieza | Dónde | URL |
+|---|---|---|
+| API | Google Cloud Run (`us-central1`) | `https://semantic-job-search-api-6s7pi2umqq-uc.a.run.app` |
+| Documentación interactiva | la misma, en `/docs` | [Swagger](https://semantic-job-search-api-6s7pi2umqq-uc.a.run.app/docs) |
+| Frontend | Streamlit Community Cloud | ver la app del equipo |
+
+El frontend toma la URL de la API de sus *Secrets* (`API_URL`), o del campo
+**URL de la API** de la barra lateral si se quiere apuntar a otra instancia —por
+ejemplo una API corriendo en local durante el desarrollo.
+
+### Cómo se construye el despliegue
+
+La API se despliega desde `api/`, que contiene el `Dockerfile`. El contenedor
+instala PyTorch en su variante solo-CPU, descarga el modelo de embeddings al
+construir la imagen —para que el arranque en frío no dependa de Hugging Face— y
+toma el puerto de la variable `PORT` que inyecta Cloud Run.
 
 ```powershell
-# Terminal 1
-cd api
-.venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --port 8000
+gcloud run deploy semantic-job-search-api --source api --region us-central1 --allow-unauthenticated --memory 1Gi
 ```
 
-```powershell
-# Terminal 2
-cloudflared tunnel --url http://localhost:8000
-```
+`--memory 1Gi` no es opcional: el valor por defecto de Cloud Run es 512 MiB y la
+API necesita unos 700 MB. Con el defecto, el contenedor entra en bucle de
+reinicios sin que el error indique la causa.
 
-La dirección que imprime el túnel se pega en el campo **URL de la API** de la
-barra lateral de la aplicación desplegada. No hay que reconfigurar ni reiniciar
-nada, aunque el túnel cambie de dominio en cada arranque.
+Los archivos `api/.dockerignore` y `api/.gcloudignore` tampoco son prescindibles.
+El primero evita que el entorno virtual, los parquet de 438 MB y el `.env` con la
+clave de Pinecone acaben dentro de la imagen, que pasaría de 2,6 GB a casi 13 GB.
+El segundo controla qué se sube a Cloud Build y garantiza que
+`data/ofertas_busqueda.parquet` sí viaje, porque sin él el contenedor no arranca.
 
-El motivo de este montaje es que la API necesita ~700 MB de memoria y un proceso
-siempre vivo, y a octubre de 2026 no hay ninguna plataforma gratuita, sin tarjeta
-y permanentemente encendida que lo soporte: Railway da un crédito de prueba de un
-solo uso, Hugging Face Spaces movió Docker a su plan de pago, Render ofrece
-512 MB que no alcanzan, Fly.io y Koyeb retiraron su cómputo gratuito, y Google
-Cloud Run exige tarjeta registrada.
+La clave de Pinecone se configura como variable del servicio en Cloud Run.
+
+### Arranque en frío
+
+Cloud Run escala a cero, así que no genera costo cuando nadie lo usa, pero la
+primera petición tras un periodo inactivo puede tardar entre 30 y 60 segundos.
+Antes de una demostración conviene abrir la URL con unos minutos de antelación.
 
 ---
 
