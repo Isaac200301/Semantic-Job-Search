@@ -30,3 +30,10 @@ frontend/.streamlit/secrets.toml
 # Notas personales de despliegue, no van al repositorio
 DESPLIEGUE.md
 CLOUDRUN.md
+
+# Artefactos de las pruebas y la cobertura
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.scannerwork/

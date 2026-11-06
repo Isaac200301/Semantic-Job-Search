@@ -1,0 +1,23 @@
+[run]
+branch = True
+
+# Sin esto, coverage.xml guarda rutas absolutas y nombres de archivo pelados
+# ("app.py", "config.py"). Como el proyecto tiene dos raices de fuentes y un
+# app.py en cada lado (api/app/ y frontend/), Sonar podria atribuir la
+# cobertura al archivo equivocado. Con rutas relativas queda sin ambiguedad.
+relative_files = True
+
+source =
+    api/app
+    frontend
+omit =
+    */__pycache__/*
+    */.venv/*
+    api/descargar_datos.py
+    api/generar_datos_busqueda.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError

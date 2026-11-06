@@ -93,7 +93,7 @@ En *Advanced settings* → *Secrets*, define la URL de la API:
    ```
 
 También puede cambiarse desde el campo de la barra lateral, útil para apuntar a
-una API local durante el desarrollo. Ver la sección 9 del
+una API local durante el desarrollo. Ver la sección 10 del
 [README del repositorio](../README.md).
 
 Como Streamlit llama a la API **desde su servidor** y no desde el navegador, la

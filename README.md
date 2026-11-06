@@ -83,7 +83,7 @@ Se eligió MiniLM: iguala o supera a MPNet y es casi el doble de rápido.
 - **La API key de Pinecone** del equipo (pídela a quien creó el índice).
 - **Los dos parquet** generados en Colab (ver paso 4.3).
 - ~3 GB de disco para las dependencias (PyTorch es la mayor parte).
-- ~7 GB de RAM libre para correr la API (ver sección 8).
+- ~1 GB de RAM libre para correr la API (ver sección 9).
 
 > **Ojo si tienes varios Python instalados.** Usa el mismo intérprete para todo.
 > Para saber cuál está usando tu terminal: `python -c "import sys; print(sys.executable)"`.
@@ -279,7 +279,41 @@ el modelo de embeddings, la estrategia de indexado o el dataset.
 
 ---
 
-## 8. Estado actual y limitaciones conocidas
+## 8. Pruebas automatizadas
+
+```powershell
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+```
+142 pruebas · 92 % de cobertura · ~17 s
+```
+
+Ninguna prueba sale a la red: Pinecone, el modelo de embeddings y la API se
+sustituyen por dobles. Eso las hace rápidas, deterministas y gratuitas, y evita
+que la clave real de Pinecone pueda usarse desde una prueba.
+
+| Carpeta | N.º | Qué cubre |
+|---|---:|---|
+| `tests/api/` | 94 | Motor de búsqueda, filtros, esquemas y los cuatro endpoints |
+| `tests/frontend/` | 48 | Cliente HTTP y la app de Streamlit completa, con `AppTest` |
+
+Al terminar quedan `htmlcov/index.html` (cobertura navegable) y `coverage.xml`
+(lo que consume SonarQube Cloud).
+
+El detalle de la estrategia está en [tests/README.md](tests/README.md).
+
+### Integración continua
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre la suite en cada
+push a `main` y a las ramas `develop/**`, y en cada pull request a `main`.
+Después envía la cobertura a SonarQube Cloud, configurado en
+[`sonar-project.properties`](sonar-project.properties).
+
+---
+
+## 9. Estado actual y limitaciones conocidas
 
 ### Funciona y está verificado
 
@@ -327,7 +361,7 @@ regenerarlo tras un cambio en los notebooks: `python generar_datos_busqueda.py`.
 
 ---
 
-## 9. Despliegue
+## 10. Despliegue
 
 El sistema está desplegado y es público. **No hay que encender nada** para usarlo.
 
@@ -372,7 +406,7 @@ Antes de una demostración conviene abrir la URL con unos minutos de antelación
 
 ---
 
-## 10. Qué NO se sube al repositorio
+## 11. Qué NO se sube al repositorio
 
 Está cubierto por el `.gitignore`, pero conviene tenerlo presente:
 
