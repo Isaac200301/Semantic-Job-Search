@@ -1,0 +1,5 @@
+# use_container_width esta marcado como obsoleto en Streamlit 1.49+, pero es el
+# unico que funciona tambien en 1.39, que es la version instalada en el equipo.
+streamlit>=1.32,<2
+requests>=2.31
+pandas>=2.0

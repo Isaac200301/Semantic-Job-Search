@@ -1,0 +1,38 @@
+# Que NO se sube a Cloud Build cuando se despliega con `gcloud run deploy --source`.
+#
+# Es distinto del .dockerignore: este filtra lo que viaja desde tu equipo hasta
+# Google; el .dockerignore filtra lo que entra en la imagen una vez alli. Hacen
+# falta los dos, porque un archivo excluido aqui ni siquiera llega al build.
+#
+# Sin este archivo gcloud improvisa uno a partir del .gitignore, y su manejo de
+# las reglas de negacion no es fiable: el riesgo es que NO suba
+# data/ofertas_busqueda.parquet y el contenedor falle al arrancar.
+
+# Entorno virtual: son mas de 1 GB que se reinstalan dentro del contenedor
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Credenciales: nunca salen de tu equipo.
+# En Cloud Run se configuran como variables del servicio.
+.env
+
+# Los parquet originales de Colab (438 MB). La API no los usa.
+data/job_descriptions_clean.parquet
+data/job_id_template_map.parquet
+data/*.npy
+
+# IMPORTANTE: data/ofertas_busqueda.parquet (28 MB) SI debe subirse.
+# Es el unico archivo de datos que la API necesita para arrancar.
+
+# Scripts que solo se usan en local
+descargar_datos.py
+generar_datos_busqueda.py
+
+# Varios
+.git/
+.gitignore
+.DS_Store
+Thumbs.db

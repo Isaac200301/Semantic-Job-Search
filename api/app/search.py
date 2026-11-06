@@ -19,25 +19,58 @@ _pinecone_index = None
 _df_clean: Optional[pd.DataFrame] = None
 
 
+def compactar(df: pd.DataFrame) -> pd.DataFrame:
+    """Reduce la huella en memoria sin cambiar ningún valor.
+
+    Dos ajustes de tipo: las columnas de texto muy repetitivas pasan a `category`
+    y los enteros de rango corto bajan de 64 bits. En conjunto el dataframe pasa
+    de ~304 MB a ~42 MB, lo que deja el proceso entero por debajo de 1 GB y hace
+    que arranque en segundos. Es idempotente: aplicarlo dos veces no hace nada.
+    """
+    for columna in config.COLUMNAS_CATEGORICAS:
+        if columna in df.columns and not isinstance(df[columna].dtype, pd.CategoricalDtype):
+            df[columna] = df[columna].astype("category")
+
+    for columna in config.COLUMNAS_ENTERO_CORTO:
+        if columna in df.columns:
+            df[columna] = pd.to_numeric(df[columna], downcast="integer")
+
+    return df
+
+
+def _cargar_dataset() -> pd.DataFrame:
+    """Devuelve la tabla de ofertas con las columnas que la búsqueda necesita.
+
+    Prefiere `ofertas_busqueda.parquet` (~27 MB, versionado en el repositorio).
+    Si no está, lo reconstruye desde los dos parquet originales de Colab leyendo
+    únicamente las columnas útiles — nunca el dataset completo, que ocupaba
+    6,7 GB en memoria por columnas de texto que la búsqueda no usa.
+    """
+    if config.RUTA_BUSQUEDA.exists():
+        return compactar(pd.read_parquet(config.RUTA_BUSQUEDA))
+
+    if config.RUTA_CLEAN.exists() and config.RUTA_MAPEO.exists():
+        df = pd.read_parquet(config.RUTA_CLEAN, columns=config.COLUMNAS_BUSQUEDA)
+        mapeo = pd.read_parquet(config.RUTA_MAPEO)
+        return compactar(df.merge(mapeo, on="Job Id", how="left"))
+
+    raise FileNotFoundError(
+        f"Faltan datos en {config.DATA_DIR}. Se espera '{config.RUTA_BUSQUEDA.name}' "
+        f"(que viene en el repositorio) o bien '{config.RUTA_CLEAN.name}' y "
+        f"'{config.RUTA_MAPEO.name}'. Ver README.md, sección 4.3."
+    )
+
+
 def cargar_recursos() -> None:
     """Carga el modelo, el índice de Pinecone y el dataset en memoria. Se llama al arrancar la API."""
     global _modelo, _pinecone_index, _df_clean
 
-    if not config.RUTA_CLEAN.exists() or not config.RUTA_MAPEO.exists():
-        raise FileNotFoundError(
-            f"Faltan datos en {config.DATA_DIR}. Se esperan "
-            f"'{config.RUTA_CLEAN.name}' y '{config.RUTA_MAPEO.name}'. "
-            "Corre descargar_datos.py o copia los archivos manualmente (ver README.md)."
-        )
+    _df_clean = _cargar_dataset()
 
     _modelo = SentenceTransformer(config.MODELO_EMBEDDINGS)
 
     pc = Pinecone(api_key=config.PINECONE_API_KEY)
     _pinecone_index = pc.Index(config.PINECONE_INDEX_NAME)
-
-    df_clean = pd.read_parquet(config.RUTA_CLEAN)
-    mapeo = pd.read_parquet(config.RUTA_MAPEO)
-    _df_clean = df_clean.merge(mapeo, on="Job Id", how="left")
 
 
 def _asegurar_recursos_cargados() -> None:

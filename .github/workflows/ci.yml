@@ -1,0 +1,70 @@
+name: Pruebas y analisis de calidad
+
+on:
+  push:
+    branches: [main, "develop/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    name: Pruebas y cobertura
+    runs-on: ubuntu-latest
+
+    # A nivel de job, para que el paso de Sonar pueda consultarlo en su `if`.
+    # Un `env` declarado dentro de un paso todavia no existe cuando GitHub
+    # evalua la condicion de ese mismo paso.
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+        with:
+          # Sonar necesita el historial completo para atribuir el codigo nuevo
+          # a su autor y calcular las metricas de "codigo reciente".
+          fetch-depth: 0
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar PyTorch en version CPU
+        # sentence-transformers arrastra PyTorch. La rueda por defecto trae
+        # CUDA y pesa mas de 2 GB; la de CPU hace lo mismo aqui y baja el
+        # tiempo de instalacion a menos de un minuto. Es el mismo truco que
+        # usa api/Dockerfile para que la imagen de Cloud Run no se dispare.
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r api/requirements.txt
+          pip install -r frontend/requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Correr las pruebas
+        # Las pruebas no salen a la red: Pinecone, el modelo y la API se
+        # sustituyen por dobles. La clave falsa es solo para que app/config.py
+        # no aborte al importarse.
+        env:
+          PINECONE_API_KEY: clave-de-prueba-no-real
+        run: python -m pytest
+
+      - name: Guardar el informe de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 14
+
+      - name: Analisis de SonarQube Cloud
+        # Se omite si el secreto no esta configurado, para que el workflow no
+        # falle en un fork donde nadie ha puesto el token.
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v8
